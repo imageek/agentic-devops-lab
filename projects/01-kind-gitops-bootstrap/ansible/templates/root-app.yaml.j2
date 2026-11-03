@@ -1,0 +1,25 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: {{ argocd_namespace }}
+spec:
+  project: default
+  source:
+    repoURL: {{ gitops_repo_url }}
+    targetRevision: {{ gitops_revision }}
+    path: projects/01-kind-gitops-bootstrap/charts/apps
+    helm:
+      parameters:
+        - name: repoURL
+          value: {{ gitops_repo_url }}
+        - name: revision
+          value: {{ gitops_revision }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ argocd_namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

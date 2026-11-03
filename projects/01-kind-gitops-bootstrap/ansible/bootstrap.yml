@@ -1,0 +1,45 @@
+---
+- name: Bootstrap Argo CD on the lab cluster
+  hosts: localhost
+  gather_facts: false
+  vars:
+    kube_context: kind-lab
+    argocd_namespace: argocd
+    argocd_chart_version: 10.11.6
+    gitops_repo_url: https://github.com/imageek/agentic-devops-lab.git
+    gitops_revision: main
+  tasks:
+    - name: Refuse any cluster other than kind-lab
+      ansible.builtin.assert:
+        that: kube_context == 'kind-lab'
+        fail_msg: This playbook only runs against kind-lab.
+        quiet: true
+
+    - name: Install Argo CD and wait for it to become ready
+      kubernetes.core.helm:
+        name: argocd
+        chart_ref: argo-cd
+        chart_repo_url: https://argoproj.github.io/argo-helm
+        chart_version: "{{ argocd_chart_version }}"
+        release_namespace: "{{ argocd_namespace }}"
+        create_namespace: true
+        context: "{{ kube_context }}"
+        wait: true
+        timeout: 5m0s
+        values:
+          # Not needed for a single-user lab syncing from a public repo.
+          dex:
+            enabled: false
+          notifications:
+            enabled: false
+          applicationSet:
+            replicas: 0
+
+    # kubectl rather than kubernetes.core.k8s, which needs the Python
+    # kubernetes library on the controller.
+    - name: Apply the root application
+      ansible.builtin.command:
+        cmd: kubectl --context {{ kube_context }} apply -f -
+        stdin: "{{ lookup('template', 'root-app.yaml.j2') }}"
+      register: root_app
+      changed_when: "'unchanged' not in root_app.stdout"

@@ -25,6 +25,14 @@ jobs:
     needs: pre-commit
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python lint and test tools
+        run: pip install -r .github/ci-requirements.txt
+      - uses: azure/setup-helm@v5.0.1
+        with:
+          version: v4.3.1
       - name: make lint test for every project
         run: |
           shopt -s nullglob
