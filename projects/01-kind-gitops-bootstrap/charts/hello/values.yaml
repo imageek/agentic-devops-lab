@@ -6,7 +6,7 @@ image:
   tag: 1.31.7-alpine
 
 # Served as the page body. Change it in Git and watch Argo CD roll it out.
-message: Hello from Argo CD
+message: Hello from a Git push
 
 resources:
   requests:
