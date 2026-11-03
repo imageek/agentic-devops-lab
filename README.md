@@ -6,7 +6,7 @@ section showing where I steered.
 
 | # | Project | Stack | Status |
 |---|---|---|---|
-| 01 | _coming soon_ | | |
+| 01 | [kind-gitops-bootstrap](projects/01-kind-gitops-bootstrap/) | Helm, Ansible, kind, Bash | Scaffolded |
 
 ## Run any project
 ```bash
