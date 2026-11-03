@@ -1,0 +1,4 @@
+---
+# The root application overrides these, so child apps follow the same revision.
+repoURL: https://github.com/imageek/agentic-devops-lab.git
+revision: main

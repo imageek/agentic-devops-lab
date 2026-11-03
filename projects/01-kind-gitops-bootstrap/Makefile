@@ -6,6 +6,10 @@ export ANSIBLE_COLLECTIONS_PATH := $(CURDIR)/.collections
 
 COLLECTIONS_STAMP := .collections/.installed
 
+# Git revision Argo CD syncs from. Set it to a branch to test before merging:
+#   make up GITOPS_REVISION=feat/my-branch
+GITOPS_REVISION ?=
+
 .PHONY: lint test up down
 
 # --force because galaxy otherwise counts a copy bundled with ansible as
@@ -27,7 +31,7 @@ test:
 
 up: $(COLLECTIONS_STAMP)
 	@./scripts/cluster.sh up
-	@ansible-playbook -i ansible/inventory.yml ansible/bootstrap.yml
+	@ansible-playbook -i ansible/inventory.yml ansible/bootstrap.yml $(if $(GITOPS_REVISION),-e gitops_revision=$(GITOPS_REVISION))
 
 down:
 	@./scripts/cluster.sh down

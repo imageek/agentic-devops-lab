@@ -1,0 +1,6 @@
+---
+apiVersion: v2
+name: apps
+description: App-of-apps listing what Argo CD deploys on the lab cluster
+type: application
+version: 0.1.0

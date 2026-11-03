@@ -6,6 +6,8 @@
     kube_context: kind-lab
     argocd_namespace: argocd
     argocd_chart_version: 10.11.6
+    gitops_repo_url: https://github.com/imageek/agentic-devops-lab.git
+    gitops_revision: main
   tasks:
     - name: Refuse any cluster other than kind-lab
       ansible.builtin.assert:
@@ -32,3 +34,12 @@
             enabled: false
           applicationSet:
             replicas: 0
+
+    # kubectl rather than kubernetes.core.k8s, which needs the Python
+    # kubernetes library on the controller.
+    - name: Apply the root application
+      ansible.builtin.command:
+        cmd: kubectl --context {{ kube_context }} apply -f -
+        stdin: "{{ lookup('template', 'root-app.yaml.j2') }}"
+      register: root_app
+      changed_when: "'unchanged' not in root_app.stdout"
