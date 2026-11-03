@@ -8,7 +8,7 @@ TODO
 
 ## Prerequisites
 - A running Docker daemon (built and tested on Docker Desktop)
-- kind, kubectl, helm, ansible
+- kind, kubectl, helm, ansible (`make` installs the pinned collections into `.collections/`)
 - shellcheck, yamllint, ansible-lint (for `make lint`)
 
 ## Run
