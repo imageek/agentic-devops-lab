@@ -6,7 +6,7 @@ section showing where I steered.
 
 | # | Project | Stack | Status |
 |---|---|---|---|
-| 01 | [kind-gitops-bootstrap](projects/01-kind-gitops-bootstrap/) | Helm, Ansible, Argo CD, kind, Bash | In progress |
+| 01 | [kind-gitops-bootstrap](projects/01-kind-gitops-bootstrap/) | Helm, Ansible, Argo CD, kind, Bash | Done |
 
 ## Run any project
 ```bash

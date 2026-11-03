@@ -68,7 +68,8 @@ make down
 This deletes only the `lab` cluster.
 
 ## How this was built
-Status: the end-to-end sync from Git hasn't been tested live yet.
+Tested live from a fresh cluster: a one-line `message` change pushed to the branch reached the running app
+in 142 seconds, through Argo CD's normal polling.
 
 What the agent did:
 - Proposed the milestone plan, then wrote the scripts, playbook, charts, tests, and CI changes.
