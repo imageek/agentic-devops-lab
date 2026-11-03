@@ -15,7 +15,7 @@ test:
 	@echo TODO
 
 up:
-	@echo TODO
+	@./scripts/cluster.sh up
 
 down:
-	@echo TODO
+	@./scripts/cluster.sh down

@@ -7,7 +7,7 @@ Learn agentic coding.
 TODO
 
 ## Prerequisites
-- Docker via colima, running
+- A running Docker daemon (built and tested on Docker Desktop)
 - kind, kubectl, helm, ansible
 - shellcheck, yamllint, ansible-lint (for `make lint`)
 
