@@ -21,3 +21,4 @@ Monorepo of self-contained DevOps projects, built with Claude Code. Doubles as a
 ## Workflow
 - Branch per project or feature: `feat/NN-short-name`. PR into main via `gh pr create`; CI must pass.
 - Local k8s: `kind create cluster --name lab` (Docker via colima must be running).
+- Always pass --context explicitly (kind-lab for lab work). Never touch kind-multi unless I ask; it's my personal monitoring cluster.
