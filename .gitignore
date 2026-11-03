@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.envrc
+*.tfstate
+*.tfstate.*
+.terraform/
+*.kubeconfig
+.venv/
+__pycache__/
+node_modules/
+.claude/settings.local.json
+CLAUDE.local.md
