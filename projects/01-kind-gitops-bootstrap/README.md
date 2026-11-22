@@ -82,5 +82,29 @@ What the agent did:
 What I steered:
 - Set the rule that work only ever targets `kind-lab`, with `kind-multi` off limits.
 - Chose Argo CD over Flux.
-- Chose Docker Desktop over starting colima.
 - Decided to finish the tests and docs before pushing the branch for the first live GitOps test.
+
+Found in review after the first merge, and fixed:
+- **Version drift:** the Kubernetes version was pinned in both `kind-config.yaml` and the Makefile, with
+  nothing keeping them equal. The Makefile now reads it from `kind-config.yaml` (#2).
+- **Multi-line values broke the chart:** a multi-line `message` rendered invalid YAML. Fixed with `nindent`
+  (#2), then proven live: a two-line message reached the page 7 seconds after Argo CD was pointed at the
+  branch (#4).
+- **Smoke test passed too early:** after repointing Argo CD from a branch back to `main`, `make smoke` passed
+  while the `hello` app still tracked the branch. It now waits for the revision Argo CD actually compared
+  against (#5).
+- **Supply chain:** CI actions pinned to commit SHAs rather than movable tags (#7).
+
+## In production I'd add
+This is a single-user lab. For a real platform team, I'd add:
+- **Access:** SSO (OIDC) for Argo CD instead of the initial admin password, plus `AppProject`s and RBAC so
+  teams can only deploy to their own namespaces.
+- **Secrets:** External Secrets Operator backed by Vault (or Sealed Secrets), so no secret ever lives in Git.
+- **Ingress and TLS:** an ingress controller with cert-manager, instead of port-forwarding.
+- **Multiple clusters and environments:** ApplicationSets generating apps per cluster and per environment,
+  with promotion by pull request.
+- **Argo CD itself:** HA mode, and its own config managed by Argo CD (self-managing).
+- **Signals:** Argo CD metrics into Prometheus, with alerts on sync failures and degraded health, and
+  notifications to chat.
+- **Policy:** admission checks (Kyverno or OPA Gatekeeper) enforcing what the hello chart already does:
+  non-root, dropped capabilities, resource limits.
