@@ -1,7 +1,13 @@
 ---
+# Installs Argo CD on kind-lab and hands it the root application. After this,
+# Argo CD deploys everything else from Git; Ansible never touches the apps.
+#
+# Run via `make up`. Safe to re-run: each task only changes what differs.
 - name: Bootstrap Argo CD on the lab cluster
   hosts: localhost
+  # No facts needed: every task talks to the cluster API, not to this host.
   gather_facts: false
+  # Defaults. Override any with -e; make up sets gitops_revision.
   vars:
     kube_context: kind-lab
     argocd_namespace: argocd
@@ -9,12 +15,16 @@
     gitops_repo_url: https://github.com/imageek/agentic-devops-lab.git
     gitops_revision: main
   tasks:
+    # kube_context can be overridden with -e, so check it before touching
+    # anything (tests/test_playbook_guard.sh checks this).
     - name: Refuse any cluster other than kind-lab
       ansible.builtin.assert:
         that: kube_context == 'kind-lab'
         fail_msg: This playbook only runs against kind-lab.
         quiet: true
 
+    # Pinned chart version; wait: true blocks until the pods are ready, so the
+    # Application CRD exists before the next task applies one.
     - name: Install Argo CD and wait for it to become ready
       kubernetes.core.helm:
         name: argocd
@@ -35,8 +45,11 @@
           applicationSet:
             replicas: 0
 
+    # The root app points Argo CD at charts/apps (app of apps). Its template
+    # fills in the repo URL and revision from the vars above.
     # kubectl rather than kubernetes.core.k8s, which needs the Python
-    # kubernetes library on the controller.
+    # kubernetes library on the controller. kubectl apply prints "unchanged"
+    # when nothing differs, which is how Ansible knows to report "ok".
     - name: Apply the root application
       ansible.builtin.command:
         cmd: kubectl --context {{ kube_context }} apply -f -

@@ -11,10 +11,12 @@ readonly CONTEXT="kind-${CLUSTER_NAME}"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly PROJECT_DIR
 
+# Usage errors exit 2, the usual code for "called wrong" (vs 1 for "failed").
 usage() {
   echo "usage: ${0##*/} up|down" >&2
 }
 
+# Exact whole-line match (-x), so a cluster named e.g. "lab2" doesn't count.
 cluster_exists() {
   local clusters
   clusters="$(kind get clusters 2>/dev/null)"
@@ -30,6 +32,8 @@ restore_context() {
   fi
 }
 
+# Create the cluster if it's missing (safe to re-run), then show its nodes.
+# --wait blocks until the control plane is Ready.
 up() {
   if cluster_exists; then
     echo "cluster ${CLUSTER_NAME} already exists"
@@ -45,6 +49,8 @@ up() {
   kubectl --context "${CONTEXT}" get nodes
 }
 
+# --name is always passed, so kind never falls back to KIND_CLUSTER_NAME
+# (tests/test_cluster.sh checks this).
 down() {
   kind delete cluster --name "${CLUSTER_NAME}"
 }
