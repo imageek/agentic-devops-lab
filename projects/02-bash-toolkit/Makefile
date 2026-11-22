@@ -15,8 +15,11 @@ SHELL := bash
 lint:
 	@find . \( -name '*.sh' -o -name '*.bats' \) -exec shellcheck {} +
 
+# bats comes from the system (brew install bats-core); CI pins it to the
+# same version in .github/workflows/ci.yml.
 test:
-	@echo "TODO: run bats"
+	@command -v bats >/dev/null || { echo "bats not found: brew install bats-core" >&2; exit 1; }
+	@bats tests
 
 # ---------------------------------------------------------------- lifecycle
 # A toolkit of CLI scripts has nothing to start or stop.

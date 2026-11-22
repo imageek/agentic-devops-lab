@@ -9,7 +9,7 @@ TODO: a cert-expiry checker and a log-triage script, each with a bats suite.
 
 ## Prerequisites
 - bash, make
-- bats-core (for `make test`)
+- bats-core 1.5+ (for `make test`; built with 1.14.0, which CI pins): `brew install bats-core`
 - shellcheck (for `make lint`)
 
 ## Run
