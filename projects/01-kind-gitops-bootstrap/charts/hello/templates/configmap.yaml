@@ -6,5 +6,6 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 data:
+  # nindent re-indents every line of message, so multi-line values stay valid YAML.
   index.html: |
-    {{ .Values.message }}
+    {{- .Values.message | nindent 4 }}

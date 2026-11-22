@@ -10,7 +10,11 @@ COLLECTIONS_STAMP := .collections/.installed
 #   make up GITOPS_REVISION=feat/my-branch
 GITOPS_REVISION ?=
 
-KUBERNETES_VERSION := 1.37.0
+# Read from kind-config.yaml so the cluster and kubeconform can't drift apart.
+KUBERNETES_VERSION := $(shell sed -n 's|.*kindest/node:v\([0-9.]*\)@.*|\1|p' kind-config.yaml)
+ifeq ($(KUBERNETES_VERSION),)
+$(error could not read the kindest/node version from kind-config.yaml)
+endif
 KUBECONFORM := docker run --rm -i ghcr.io/yannh/kubeconform:v0.8.0
 
 .PHONY: lint test smoke up down
