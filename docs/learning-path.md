@@ -1,6 +1,6 @@
 # Learning path
 
-Each project rebuilds something you already did at Broadcom, this time driven by an agent and published
+Each project rebuilds something you've already done in your career, this time driven by an agent and published
 publicly. You already know the domain, so all your attention goes to the agent workflow. Each project
 introduces one new agentic pattern.
 
