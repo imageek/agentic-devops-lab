@@ -15,6 +15,7 @@ must pass lint and tests in CI before it merges.
 | # | Project | Stack | Status |
 |---|---|---|---|
 | 01 | [kind-gitops-bootstrap](projects/01-kind-gitops-bootstrap/) | Helm, Ansible, Argo CD, kind, Bash | Done |
+| 02 | [bash-toolkit](projects/02-bash-toolkit/) | Bash, bats, Make, pre-commit | In progress |
 
 What's next: [learning path](docs/learning-path.md).
 
