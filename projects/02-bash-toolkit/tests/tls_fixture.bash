@@ -54,3 +54,33 @@ stop_tls_servers() {
   # shellcheck disable=SC2046  # one PID per word is what kill wants
   kill $(cat "$pids") 2>/dev/null || true
 }
+
+# start_silent_server NAME
+#   Accepts TCP connections and never answers, like a hung TLS endpoint.
+#   Exports NAME=127.0.0.1:<port>. python3 because nc's flags differ between
+#   macOS and Linux, and neither reports an OS-picked port reliably.
+start_silent_server() {
+  local name=$1
+  local dir="$BATS_FILE_TMPDIR/$name"
+  mkdir -p "$dir"
+  python3 -c '
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+s.listen()
+print(s.getsockname()[1], flush=True)
+held = []
+while True:
+    held.append(s.accept()[0])  # keep each connection open, say nothing
+' >"$dir/port" 2>&1 3>&- &
+  echo "$!" >>"$BATS_FILE_TMPDIR/server.pids"
+
+  local port="" _
+  for _ in {1..50}; do
+    port=$(cat "$dir/port")
+    [[ "$port" =~ ^[0-9]+$ ]] && break
+    sleep 0.1
+  done
+  [[ "$port" =~ ^[0-9]+$ ]] || { cat "$dir/port" >&2; return 1; }
+  export "$name=127.0.0.1:$port"
+}

@@ -2,13 +2,13 @@
 # Spec for bin/cert-expiry: report how long the TLS cert served at host:port
 # has left, Nagios-style.
 #
-#   cert-expiry [--warn DAYS] [--crit DAYS] HOST:PORT...
+#   cert-expiry [--warn DAYS] [--crit DAYS] [--timeout SECONDS] HOST:PORT...
 #
 # Days left are rounded down. For each target:
 #   CRIT     if days left < --crit (default 30), or already expired
 #   WARN     if days left <= --warn (default 60)
 #   OK       otherwise
-#   UNKNOWN  if no cert could be fetched
+#   UNKNOWN  if no cert could be fetched within --timeout (default 10)
 # One line per target, in argument order. Exit status is the worst result:
 #   CRIT 2 > UNKNOWN 3 > WARN 1 > OK 0
 # Usage errors exit 3 with a message on stderr and nothing on stdout.
@@ -28,6 +28,7 @@ setup_file() {
   load tls_fixture
   start_tls_server LATE 20400101000000Z
   start_tls_server EARLY 20280101000000Z
+  start_silent_server SILENT
 }
 
 teardown_file() {
@@ -79,7 +80,7 @@ before_late() {
 @test "an expired cert is CRIT" {
   before_late -3600
   run -2 cert-expiry "$LATE"
-  [[ "$output" == "CRIT $LATE expired (expired 2040-01-01)" ]]
+  [[ "$output" == "CRIT $LATE expired on 2040-01-01" ]]
 }
 
 @test "--warn and --crit override the defaults" {
@@ -107,6 +108,13 @@ before_late() {
 @test "nothing listening is UNKNOWN" {
   run -3 cert-expiry 127.0.0.1:1
   [[ "$output" == "UNKNOWN 127.0.0.1:1"* ]]
+}
+
+@test "a server that never answers is UNKNOWN after --timeout" {
+  local start=$SECONDS
+  run -3 cert-expiry --timeout 1 "$SILENT"
+  [[ "$output" == "UNKNOWN $SILENT timed out after 1s" ]]
+  ((SECONDS - start < 5))
 }
 
 # ---------------------------------------------------------------- several targets
@@ -158,11 +166,15 @@ assert_usage_error() {
   assert_usage_error --warn 10 --crit 20 "$LATE"
 }
 
+@test "usage error: --timeout not a positive whole number" {
+  assert_usage_error --timeout 0 "$LATE"
+}
+
 @test "usage error: unknown option" {
   assert_usage_error --verbose "$LATE"
 }
 
 @test "--help prints usage on stdout and exits 0" {
   run -0 cert-expiry --help
-  [[ "$output" == *"--warn"* && "$output" == *"--crit"* ]]
+  [[ "$output" == *"--warn"* && "$output" == *"--crit"* && "$output" == *"--timeout"* ]]
 }
