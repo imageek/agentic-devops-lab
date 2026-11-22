@@ -18,6 +18,9 @@ must pass lint and tests in CI before it merges.
 
 What's next: [learning path](docs/learning-path.md).
 
+GitHub is the primary copy; PRs and merges happen here. Every merge to `main` is mirrored to
+[GitLab](https://gitlab.com/imageek72/agentic-devops-lab).
+
 ## Run any project
 ```bash
 make -C projects/<dir> lint test
