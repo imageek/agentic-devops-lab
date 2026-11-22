@@ -16,4 +16,6 @@ make -C projects/<dir> lint test
 ## Repo conventions
 - `CLAUDE.md`: project instructions the agent follows
 - `.claude/skills/`: reusable agent workflows (`/new-project`, `/ship`)
-- `pre-commit` + GitHub Actions gate every PR: shellcheck, yamllint, actionlint, gitleaks
+- `pre-commit` runs on every commit: shellcheck, YAML syntax, actionlint, gitleaks secret scan
+- GitHub Actions gates every PR: the same pre-commit hooks, then `make lint test` for every project
+  (yamllint, helm lint, ansible-lint, tests)
