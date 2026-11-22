@@ -10,10 +10,11 @@ SHELL := bash
 .PHONY: lint test up down
 
 # ---------------------------------------------------------------- checks
-# shellcheck understands .bats files, so tests get linted too.
-# Skipped when there's nothing to check yet.
+# The toolkit's commands live in bin/ without an extension, so list them
+# explicitly. shellcheck understands .bats files, so tests get linted too.
 lint:
-	@find . \( -name '*.sh' -o -name '*.bats' \) -exec shellcheck {} +
+	@find bin -type f -exec shellcheck {} +
+	@find . \( -name '*.sh' -o -name '*.bats' -o -name '*.bash' \) -exec shellcheck {} +
 
 # bats comes from the system (brew install bats-core); CI pins it to the
 # same version in .github/workflows/ci.yml.

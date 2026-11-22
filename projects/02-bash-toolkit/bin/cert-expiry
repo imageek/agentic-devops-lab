@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# cert-expiry: report how long the TLS cert served at each HOST:PORT has left.
+# Nagios-style exit status; the spec is tests/cert_expiry.bats.
+set -euo pipefail
+
+readonly DAY=86400
+
+usage() {
+  cat <<'EOF'
+Usage: cert-expiry [--warn DAYS] [--crit DAYS] [--timeout SECONDS] HOST:PORT...
+
+Checks the TLS certificate served at each HOST:PORT and prints one line each:
+  OK | WARN | CRIT | UNKNOWN  HOST:PORT  details
+
+  --warn DAYS        WARN when this many days or fewer are left (default 60)
+  --crit DAYS        CRIT when fewer than this many days are left (default 30)
+  --timeout SECONDS  give up on a host after this long (default 10)
+  -h, --help         show this help
+
+Exit status is the worst result: CRIT 2 > UNKNOWN 3 > WARN 1 > OK 0.
+Usage errors exit 3.
+EOF
+}
+
+# Print a usage error to stderr and exit UNKNOWN.
+die_usage() {
+  echo "cert-expiry: $1" >&2
+  echo "Try 'cert-expiry --help'." >&2
+  exit 3
+}
+
+is_whole_number() {
+  [[ "$1" =~ ^[0-9]+$ ]]
+}
+
+# openssl's date ("Jan  1 00:00:00 2040 GMT") to epoch seconds, GNU or BSD date.
+to_epoch() {
+  date -u -d "$1" +%s 2>/dev/null ||
+    date -u -j -f '%b %e %T %Y %Z' "$1" +%s 2>/dev/null
+}
+
+# Epoch seconds to YYYY-MM-DD in UTC, using bash's own strftime.
+to_day() {
+  TZ=UTC printf '%(%F)T' "$1"
+}
+
+# fetch_cert HOST PORT TIMEOUT
+#   Prints the server's leaf cert as PEM. Exit 0 on success, 124 on timeout
+#   (same code as coreutils timeout), anything else on failure. macOS has no
+#   `timeout` command, so a background watchdog kills openssl instead.
+fetch_cert() {
+  local host=$1 port=$2 timeout=$3 out status=0
+  out=$(mktemp)
+
+  openssl s_client -connect "$host:$port" -servername "$host" \
+    </dev/null >"$out" 2>/dev/null &
+  local client=$!
+
+  # The watchdog kills its own sleep when stopped, so no sleep is left behind.
+  (
+    trap 'kill "$nap" 2>/dev/null; exit 0' TERM
+    sleep "$timeout" &
+    nap=$!
+    wait "$nap"
+    kill "$client" 2>/dev/null && touch "$out.timedout"
+  ) >/dev/null 2>&1 &
+  local watchdog=$!
+
+  wait "$client" || status=$?
+  kill "$watchdog" 2>/dev/null || true
+  wait "$watchdog" 2>/dev/null || true
+
+  if [[ -e "$out.timedout" ]]; then
+    status=124
+  elif ((status == 0)); then
+    openssl x509 -in "$out" 2>/dev/null || status=1
+  fi
+  rm -f "$out" "$out.timedout"
+  return "$status"
+}
+
+# check_target TARGET WARN CRIT TIMEOUT NOW
+#   Prints the result line and returns the Nagios status for that target.
+check_target() {
+  local target=$1 warn=$2 crit=$3 timeout=$4 now=$5
+  local host=${target%:*} port=${target##*:}
+  local pem status=0
+
+  pem=$(fetch_cert "$host" "$port" "$timeout") || status=$?
+  if ((status == 124)); then
+    echo "UNKNOWN $target timed out after ${timeout}s"
+    return 3
+  elif ((status != 0)); then
+    echo "UNKNOWN $target could not fetch a certificate"
+    return 3
+  fi
+
+  local not_after expiry
+  not_after=$(openssl x509 -noout -enddate <<<"$pem")
+  not_after=${not_after#notAfter=}
+  if ! expiry=$(to_epoch "$not_after"); then
+    echo "UNKNOWN $target could not parse expiry date '$not_after'"
+    return 3
+  fi
+
+  local expires_on
+  expires_on=$(to_day "$expiry")
+  if ((expiry <= now)); then
+    echo "CRIT $target expired on $expires_on"
+    return 2
+  fi
+
+  # Bash integer division rounds down for positive numbers.
+  local days=$(((expiry - now) / DAY)) label=OK rc=0
+  if ((days < crit)); then
+    label=CRIT rc=2
+  elif ((days <= warn)); then
+    label=WARN rc=1
+  fi
+  echo "$label $target $days days left (expires $expires_on)"
+  return "$rc"
+}
+
+# Nagios statuses ranked by how much attention they need.
+severity() {
+  case $1 in
+    0) echo 0 ;; # OK
+    1) echo 1 ;; # WARN
+    3) echo 2 ;; # UNKNOWN
+    2) echo 3 ;; # CRIT
+  esac
+}
+
+main() {
+  local warn=60 crit=30 timeout=10
+  local -a targets=()
+
+  while (($# > 0)); do
+    case $1 in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      --warn | --crit | --timeout)
+        (($# >= 2)) || die_usage "$1 needs a value"
+        is_whole_number "$2" || die_usage "$1 must be a whole number, got '$2'"
+        case $1 in
+          --warn) warn=$((10#$2)) ;;
+          --crit) crit=$((10#$2)) ;;
+          --timeout) timeout=$((10#$2)) ;;
+        esac
+        shift 2
+        ;;
+      --)
+        shift
+        targets+=("$@")
+        break
+        ;;
+      -*) die_usage "unknown option '$1'" ;;
+      *)
+        targets+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  ((${#targets[@]} > 0)) || die_usage "no HOST:PORT given"
+  ((timeout > 0)) || die_usage "--timeout must be at least 1"
+  ((crit <= warn)) || die_usage "--crit ($crit) must not be above --warn ($warn)"
+  local target
+  for target in "${targets[@]}"; do
+    [[ "$target" =~ ^[^:]+:[0-9]+$ ]] || die_usage "'$target' is not HOST:PORT"
+  done
+
+  local now=${CERT_EXPIRY_NOW:-$(date +%s)}
+  local worst=0 rc
+  for target in "${targets[@]}"; do
+    rc=0
+    check_target "$target" "$warn" "$crit" "$timeout" "$now" || rc=$?
+    if (($(severity "$rc") > $(severity "$worst"))); then
+      worst=$rc
+    fi
+  done
+  exit "$worst"
+}
+
+main "$@"
