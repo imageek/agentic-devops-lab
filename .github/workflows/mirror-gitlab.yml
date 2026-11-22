@@ -1,0 +1,55 @@
+name: mirror-gitlab
+
+# GitHub is the primary copy: PRs and merges happen here. After every push to
+# main (and on tags), copy main and all tags to the GitLab mirror.
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two mirror pushes at once; queue them instead.
+concurrency:
+  group: mirror-gitlab
+  cancel-in-progress: false
+
+env:
+  GITLAB_REPO: git@gitlab.com:imageek72/agentic-devops-lab.git
+  # gitlab.com's published ED25519 host key
+  # (fingerprint SHA256:eUXGGm1YGsMAS7vkcx6JOJdOGHPem5gQp4taiCfCLB8).
+  # Pinned so the job can't be pointed at an impostor host.
+  GITLAB_HOST_KEY: gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      # Full history so GitLab receives every commit. No stored GitHub token.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The deploy key only has write access to this one GitLab project.
+      # Plain push, never --force: if the mirror's history ever diverges, fail
+      # loudly rather than overwrite it.
+      - name: Push main and tags to GitLab
+        env:
+          SSH_KEY: ${{ secrets.GITLAB_MIRROR_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_KEY}" ]; then
+            echo "::error::secret GITLAB_MIRROR_SSH_KEY is not set"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${GITLAB_HOST_KEY}" > ~/.ssh/known_hosts
+          git remote add gitlab "${GITLAB_REPO}"
+          # origin/main, not HEAD, so a tag-triggered run still mirrors main.
+          git push gitlab refs/remotes/origin/main:refs/heads/main
+          git push gitlab --tags
