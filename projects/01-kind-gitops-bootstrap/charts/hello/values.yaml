@@ -6,7 +6,10 @@ image:
   tag: 1.31.7-alpine
 
 # Served as the page body. Change it in Git and watch Argo CD roll it out.
-message: Hello from Argo CD
+# Multi-line works: use a YAML block scalar (|).
+message: |
+  Hello from Argo CD
+  Delivered by GitOps: this line came from a Git push.
 
 resources:
   requests:
