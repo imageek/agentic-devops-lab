@@ -1,12 +1,22 @@
 # agentic-devops-lab
 
-DevOps and SRE projects built through **agentic coding** with Claude Code. I set the direction, review, and
-own the result; the agent does much of the typing. Each project's README has a *How this was built*
-section showing where I steered.
+[![ci](https://github.com/imageek/agentic-devops-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/imageek/agentic-devops-lab/actions/workflows/ci.yml)
+
+I'm a DevOps and site reliability engineer with 25+ years in infrastructure and systems engineering:
+Ansible, Kubernetes, Helm, Jenkins, GCP, 24x7 on-call and incident response, Vault, OIDC and TLS.
+
+This repo is where I learn **agentic coding** with Claude Code, on problems I already know well. I set the
+direction, review every diff, and own the result; the agent does much of the typing. Each project's README
+has a *How this was built* section showing what the agent did and where I steered.
+
+Every project is reproducible from source control, runs locally (kind, mocks, `terraform plan` only), and
+must pass lint and tests in CI before it merges.
 
 | # | Project | Stack | Status |
 |---|---|---|---|
 | 01 | [kind-gitops-bootstrap](projects/01-kind-gitops-bootstrap/) | Helm, Ansible, Argo CD, kind, Bash | Done |
+
+What's next: [learning path](docs/learning-path.md).
 
 ## Run any project
 ```bash
@@ -19,3 +29,6 @@ make -C projects/<dir> lint test
 - `pre-commit` runs on every commit: shellcheck, YAML syntax, actionlint, gitleaks secret scan
 - GitHub Actions gates every PR: the same pre-commit hooks, then `make lint test` for every project
   (yamllint, helm lint, ansible-lint, tests)
+
+## License
+[MIT](LICENSE)
