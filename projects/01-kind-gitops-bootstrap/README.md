@@ -48,7 +48,8 @@ kubectl --context kind-lab -n argocd port-forward svc/argocd-server 8080:443
 ```
 
 To see GitOps work, change `message` in `charts/hello/values.yaml`, push it to the revision Argo CD is
-tracking, and run `make smoke` once it has synced.
+tracking, and run `make smoke` once it has synced. If you ran `make up` with `GITOPS_REVISION`, pass the
+same value to `make smoke` so it checks that Argo CD is tracking that branch.
 
 ## Test
 ```bash
