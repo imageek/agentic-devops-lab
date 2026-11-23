@@ -15,7 +15,7 @@ must pass lint and tests in CI before it merges.
 | # | Project | Stack | Status |
 |---|---|---|---|
 | 01 | [kind-gitops-bootstrap](projects/01-kind-gitops-bootstrap/) | Helm, Ansible, Argo CD, kind, Bash | Done |
-| 02 | [bash-toolkit](projects/02-bash-toolkit/) | Bash, bats, Make, pre-commit | In progress |
+| 02 | [bash-toolkit](projects/02-bash-toolkit/) | Bash, bats, Make, pre-commit | Done |
 
 What's next: [learning path](docs/learning-path.md).
 
@@ -32,7 +32,7 @@ make -C projects/<dir> lint test
 - `.claude/skills/`: reusable agent workflows (`/new-project`, `/ship`)
 - `pre-commit` runs on every commit: shellcheck, YAML syntax, actionlint, gitleaks secret scan
 - GitHub Actions gates every PR: the same pre-commit hooks, then `make lint test` for every project
-  (yamllint, helm lint, ansible-lint, tests)
+  (yamllint, helm lint, ansible-lint, bats and other tests)
 
 ## License
 [MIT](LICENSE)
