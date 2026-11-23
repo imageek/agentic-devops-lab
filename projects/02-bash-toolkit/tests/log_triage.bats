@@ -6,6 +6,8 @@
 # Reads the FILEs, or stdin when none are given. The first word of each line
 # is its level, case-insensitive: DEBUG, INFO, WARN (WARNING counts as WARN),
 # ERROR. Any other first word counts as OTHER. Blank lines are skipped.
+# An ISO-8601 timestamp before the level is skipped, so
+# "2026-11-23T10:15:00Z ERROR disk full" is an ERROR with message "disk full".
 #
 # Prints a count for every level, then the --top (default 5) most frequent
 # ERROR messages after normalizing them, so repeats group together:
@@ -15,8 +17,10 @@
 #   runs of whitespace -> one space
 # Ties are broken alphabetically.
 #
-# Exit status: 0 OK, 1 more ERRORs than --max-errors, 2 usage error or an
-# unreadable file (message on stderr, nothing on stdout).
+# Exit status is Nagios-style, like cert-expiry:
+#   0 OK
+#   2 CRIT     more ERRORs than --max-errors (the report is still printed)
+#   3 UNKNOWN  usage error or unreadable file (message on stderr, no stdout)
 
 # bats runs each @test in its own subshell on purpose, so shellcheck's
 # "modified in a subshell" warnings don't apply here.
@@ -138,9 +142,35 @@ LOG
   run -0 log-triage <<'LOG'
 ERROR lease expired at 2026-11-23T10:15:00Z
 ERROR lease expired at 2026-11-23 10:16:30.123+01:00
+ERROR lease expired at 2026-11-23 10:17:45,042
 ERROR lease expired at 2026-11-24
 LOG
-  assert_equal "$(top_errors)" "    3  lease expired at <time>"
+  assert_equal "$(top_errors)" "    4  lease expired at <time>"
+}
+
+# ---------------------------------------------------------------- leading timestamp
+
+@test "a timestamp before the level is skipped" {
+  run -0 log-triage <<'LOG'
+2026-11-23T10:15:00Z ERROR disk full
+2026-11-23T10:15:01.250+00:00 error disk full
+2026-11-23 10:15:02,042 WARNING slow
+2026-11-23 INFO date only
+LOG
+  [[ "${lines[0]}" == "ERROR 2" ]]
+  [[ "${lines[1]}" == "WARN  1" ]]
+  [[ "${lines[2]}" == "INFO  1" ]]
+  assert_equal "$(top_errors)" "    2  disk full"
+}
+
+@test "a timestamp followed by an unknown word is OTHER" {
+  run -0 log-triage <<<"2026-11-23T10:15:00Z Traceback (most recent call last):"
+  [[ "${lines[0]}" == "ERROR 0" && "${lines[4]}" == "OTHER 1" ]]
+}
+
+@test "a timestamp alone on a line is OTHER, not skipped" {
+  run -0 log-triage <<<"2026-11-23T10:15:00Z"
+  [[ "${lines[4]}" == "OTHER 1" ]]
 }
 
 @test "runs of whitespace collapse to one space" {
@@ -181,9 +211,9 @@ LOG
 
 # ---------------------------------------------------------------- --max-errors
 
-@test "--max-errors: at the limit is fine, over it exits 1 with the report" {
+@test "--max-errors: at the limit is OK, over it is CRIT with the report" {
   run -0 log-triage --max-errors 2 <<<$'ERROR a\nERROR b'
-  run -1 log-triage --max-errors 1 <<<$'ERROR a\nERROR b'
+  run -2 log-triage --max-errors 1 <<<$'ERROR a\nERROR b'
   [[ "${lines[0]}" == "ERROR 2" ]]
 }
 
@@ -204,9 +234,9 @@ LOG
 
 # ---------------------------------------------------------------- usage
 
-# Usage errors: exit 2, say why on stderr, print nothing on stdout.
+# Usage errors: exit 3 (UNKNOWN), say why on stderr, print nothing on stdout.
 assert_usage_error() {
-  run -2 --separate-stderr log-triage "$@" </dev/null
+  run -3 --separate-stderr log-triage "$@" </dev/null
   [[ -z "$output" ]]
   [[ -n "$stderr" ]]
 }
