@@ -9,8 +9,8 @@ cluster, and the self-hosted media services on my home Linux server.
 
 | # | Project | Testing | Agentic pattern |
 |---|---|---|---|
-| 01 | **[kind + Argo CD GitOps bootstrap](../projects/01-kind-gitops-bootstrap/)** ✅ | fake binaries, kubeconform, live smoke test | The basic loop: plan, edit, test, fix. `/new-project` and `/ship`; reading and rejecting diffs. |
-| 02 | **[Bash toolkit](../projects/02-bash-toolkit/)** ✅: a cert-expiry checker and a log-triage script. Moving project 01's script tests onto bats follows in its own PR. | **bats**, written before the code | **Test-first** with the agent: failing tests define "done". |
+| 01 | **[kind + Argo CD GitOps bootstrap](../projects/01-kind-gitops-bootstrap/)** ✅ | fake binaries, kubeconform, live smoke test; moving to **bats** for what it deploys (rendered charts, smoke test), then a kind cluster in CI | The basic loop: plan, edit, test, fix. `/new-project` and `/ship`; reading and rejecting diffs. |
+| 02 | **[Bash toolkit](../projects/02-bash-toolkit/)** ✅: a cert-expiry checker and a log-triage script. Monitoring-style tools, used to practise the pattern; not deploy gates. | **bats**, written before the code | **Test-first** with the agent: failing tests define "done". |
 | 03 | **Monitoring under GitOps:** the Argo CD hub in `kind-lab` takes over `kind-multi` and rebuilds Prometheus and Grafana from Git, with dashboards as code. | helm-unittest, smoke test | **Plan mode** for the design: hub and spoke across clusters, and rebuild instead of adopt. |
 | 04 | **Secrets:** SOPS + age for encrypted secrets in the repo; Vault + External Secrets in the cluster. SOPS delivers the bootstrap secret, Vault holds the rest. | a check that every secret file is encrypted | **Hooks:** block the agent from reading decrypted secrets, and refuse commits of unencrypted ones. |
 | 05 | **Helm chart for a Java app** (Tomcat/Corretto): probes, HPA, a values file per environment, secrets from Vault. | helm-unittest | **Custom skill** (`chart-test`) so every chart is tested the same way. |
