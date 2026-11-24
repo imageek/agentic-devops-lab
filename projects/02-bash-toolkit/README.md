@@ -7,6 +7,22 @@ define "done". Two everyday SRE tools came out of it:
 - **`cert-expiry`**: how long the TLS cert at each `host:port` has left, Nagios-style.
 - **`log-triage`**: level counts and the top recurring errors from `LEVEL message` logs.
 
+### What this project is, and isn't
+The point of 02 is the **test-first pattern**. The two tools are the subject the pattern was practised on,
+not part of a deploy pipeline. The bats tests here gate the tools' own code in CI. The tools themselves
+are runtime checks, and that work belongs in monitoring, not CI/CD:
+
+- **`cert-expiry`** is a Nagios-style check plugin: useful under NRPE/Icinga or cron on hosts without
+  Prometheus, or as a post-deploy check that an ingress serves a cert with enough days left. Where
+  Prometheus runs, the blackbox exporter already does this, and certs are best watched where they're
+  issued and stored (cert-manager, Vault PKI).
+- **`log-triage`** is for quick triage on a box, or a canary gate before promotion
+  (`kubectl logs deploy/app | log-triage --max-errors 0`). Ongoing, log-based alerting (Loki,
+  Alertmanager) does this job.
+
+bats tests for what this repo actually deploys, such as the hello chart and its live smoke test, live
+with that project: see [project 01](../01-kind-gitops-bootstrap/).
+
 ## Architecture
 Each tool is a single Bash script in `bin/`, with its spec in `tests/`:
 
