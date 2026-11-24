@@ -61,7 +61,7 @@ test: $(COLLECTIONS_STAMP)
 
 # Needs a running cluster, so it's separate from test.
 smoke:
-	@./scripts/smoke.sh
+	@bats tests/smoke
 
 # ---------------------------------------------------------------- lifecycle
 # Safe to re-run: the cluster step skips an existing cluster, and the playbook
