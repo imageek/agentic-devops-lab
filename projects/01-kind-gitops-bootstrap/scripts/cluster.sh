@@ -50,7 +50,7 @@ up() {
 }
 
 # --name is always passed, so kind never falls back to KIND_CLUSTER_NAME
-# (tests/test_cluster.sh checks this).
+# (tests/cluster.bats checks this).
 down() {
   kind delete cluster --name "${CLUSTER_NAME}"
 }

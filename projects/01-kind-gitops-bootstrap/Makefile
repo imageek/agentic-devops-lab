@@ -42,24 +42,26 @@ $(COLLECTIONS_STAMP): ansible/requirements.yml
 # Each linter is skipped when there's nothing for it to check yet.
 # Helm templates aren't plain YAML, so yamllint leaves them to helm lint.
 lint: $(COLLECTIONS_STAMP)
-	@find . -name .collections -prune -o -name '*.sh' -exec shellcheck {} +
+	@find . -name .collections -prune -o \( -name '*.sh' -o -name '*.bats' -o -name '*.bash' \) -exec shellcheck {} +
 	@find . -name .collections -prune -o \( -name '*.yaml' -o -name '*.yml' \) -not -path '*/templates/*' -exec yamllint {} +
 	@find . -name .collections -prune -o -name Chart.yaml -exec dirname {} \; | while read -r chart; do helm lint "$$chart"; done
 	@ansible-lint ansible
 
 # No cluster needed. Argo CD Applications have no bundled schema, so kubeconform
 # skips them; their schema is only checked by the API server on a live cluster.
-# Order: script tests (fake kind/kubectl), playbook syntax, playbook guard,
-# then render both charts and validate the manifests.
+# Order: playbook syntax, then the bats suites in tests/ (bats doesn't descend
+# into tests/smoke/, which needs a cluster), then render both charts and
+# validate the manifests.
+# bats comes from the system (brew install bats-core); CI pins its version.
 test: $(COLLECTIONS_STAMP)
-	@./tests/test_cluster.sh
+	@command -v bats >/dev/null || { echo "bats not found: brew install bats-core" >&2; exit 1; }
 	@ansible-playbook -i ansible/inventory.yml ansible/bootstrap.yml --syntax-check
-	@./tests/test_playbook_guard.sh
+	@bats tests
 	@for chart in charts/*/; do helm template test "$$chart"; done | $(KUBECONFORM) -strict -summary -ignore-missing-schemas -kubernetes-version $(KUBERNETES_VERSION)
 
 # Needs a running cluster, so it's separate from test.
 smoke:
-	@./scripts/smoke.sh
+	@bats tests/smoke
 
 # ---------------------------------------------------------------- lifecycle
 # Safe to re-run: the cluster step skips an existing cluster, and the playbook

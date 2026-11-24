@@ -16,7 +16,7 @@
     gitops_revision: main
   tasks:
     # kube_context can be overridden with -e, so check it before touching
-    # anything (tests/test_playbook_guard.sh checks this).
+    # anything (tests/playbook_guard.bats checks this).
     - name: Refuse any cluster other than kind-lab
       ansible.builtin.assert:
         that: kube_context == 'kind-lab'
