@@ -12,7 +12,6 @@
 # so `make test` stays cluster-free.
 
 readonly CONTEXT=kind-lab
-readonly YQ_IMAGE=mikefarah/yq:4.54.3
 
 setup() {
   load ../test_helper
@@ -52,8 +51,7 @@ wait_for_app() {
 
 @test "hello serves exactly the page its chart renders" {
   local expected page
-  expected=$(helm template hello "$PROJECT_DIR/charts/hello" --show-only templates/configmap.yaml |
-    docker run --rm -i "$YQ_IMAGE" '.data["index.html"]')
+  expected=$(rendered_page)
   page=$(kubectl --context "$CONTEXT" get --raw \
     /api/v1/namespaces/hello/services/hello:http/proxy/)
   assert_equal "$page" "$expected"

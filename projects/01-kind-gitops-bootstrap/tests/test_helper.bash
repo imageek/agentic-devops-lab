@@ -18,3 +18,20 @@ assert_equal() {
     return 1
   fi
 }
+
+# yq runs from a pinned image, like kubeconform, so it needn't be installed.
+# One pin for every suite.
+YQ_IMAGE=mikefarah/yq:4.54.3
+
+# Reads a YAML stream on stdin and prints it as one JSON array.
+yq_json() {
+  docker run --rm -i "$YQ_IMAGE" -o=json ea '[.]'
+}
+
+# rendered_page [helm args...]
+#   The page the hello chart renders (its ConfigMap's index.html), with any
+#   extra helm args, e.g. --set message=...
+rendered_page() {
+  helm template hello "$PROJECT_DIR/charts/hello" --show-only templates/configmap.yaml "$@" |
+    docker run --rm -i "$YQ_IMAGE" '.data["index.html"]'
+}
