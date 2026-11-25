@@ -57,7 +57,8 @@ that revision: it compares the served page with the chart in your working tree.
 ## Test
 ```bash
 make lint test  # no cluster needed
-make smoke      # checks the running cluster
+make e2e        # installs the chart into kind-lab (namespace hello-e2e) and tests the pods
+make smoke      # checks the Argo CD-managed app on the running cluster
 ```
 
 Merging to `main` is the deploy here: Argo CD syncs whatever lands there. So the tests that matter most
@@ -69,9 +70,12 @@ run on every PR, before the merge, and CI must pass for a PR to merge.
 | kubeconform | `make test`, CI | Every rendered manifest against the Kubernetes schema | invalid manifests |
 | `tests/cluster.bats` | `make test`, CI | `scripts/cluster.sh` with fake `kind` and `kubectl`: only ever `kind-lab`, context restored, idempotent | a script that could touch another cluster |
 | `tests/playbook_guard.bats` | `make test`, CI | The playbook refuses any context but `kind-lab` | the same, for Ansible |
+| `tests/e2e/hello.bats` | `make e2e`, CI (job `e2e-01`, a throwaway kind cluster) | Installs the hello chart from the PR with Helm, then: Available, no restarts, a non-root user inside the pod, the exact page through the Service, and a new message rolling out new pods that serve it | a chart that renders but won't run |
 | `tests/smoke/smoke.bats` | `make smoke` | Argo CD apps Synced/Healthy at the expected revision, and hello serves exactly the page its chart renders | a deploy that didn't land |
 
 `make test` needs Docker and network access for the yq and kubeconform images, but no cluster.
+`make e2e` uses its own release and namespace, so on `kind-lab` it runs beside Argo CD's `hello` without
+touching it, and cleans up after itself (`E2E_KEEP=1` leaves it running for debugging).
 
 ## Teardown
 ```bash
@@ -116,8 +120,11 @@ Moved to bats, for what this project deploys:
   a `latest` tag, a fixed checksum) were each caught by `charts.bats`.
 - **Smoke test is stricter:** it used to pass on any non-empty page. It now requires the exact page the chart
   renders, verified on `kind-lab` along with two runs that must fail.
-- **Next:** a kind cluster in CI that installs the hello chart and runs bats against it, so a chart that
-  renders but won't run can't merge either.
+- **A kind cluster in CI:** the `e2e-01` job installs the hello chart on a throwaway cluster for every PR,
+  using the same pinned node image as `make up`, so a chart that renders but won't run can't merge either.
+  Deliberate bugs: a missing image tag and a fixed checksum were caught. A writable page mount wasn't,
+  because Kubernetes mounts ConfigMap volumes read-only whatever the chart says. That live check was
+  dropped as one that could never fail; `charts.bats` guards the chart's setting.
 
 ## In production I'd add
 This is a single-user lab. For a real platform team, I'd add:

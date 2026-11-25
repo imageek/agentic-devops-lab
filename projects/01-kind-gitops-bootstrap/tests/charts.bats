@@ -4,16 +4,13 @@
 # stop a bad chart before Argo CD ever syncs it. No cluster needed.
 #
 # kubeconform (in `make test`) checks the schema; these check the content.
-# helm renders, yq (pinned image, like kubeconform) turns the YAML stream into
-# one JSON array, and jq asserts on it.
-
-readonly YQ_IMAGE=mikefarah/yq:4.54.3
+# helm renders, yq (yq_json in test_helper) turns the YAML stream into one
+# JSON array, and jq asserts on it.
 
 # render CHART [helm args...]
 #   Prints the rendered chart as a JSON array, one element per manifest.
 render() {
-  helm template test "$PROJECT_DIR/charts/$1" "${@:2}" |
-    docker run --rm -i "$YQ_IMAGE" -o=json ea '[.]'
+  helm template test "$PROJECT_DIR/charts/$1" "${@:2}" | yq_json
 }
 
 # Shared jq definitions, so each check reads as one line.

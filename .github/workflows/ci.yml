@@ -54,3 +54,46 @@ jobs:
               echo "::endgroup::"
             fi
           done
+
+  # Project 01: install the hello chart on a throwaway kind cluster and test
+  # the running pods, so a chart that renders but won't run can't merge.
+  # The cluster is named lab, so the context is kind-lab here too and the
+  # tests' context guard works unchanged.
+  e2e-01:
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    env:
+      PROJECT: projects/01-kind-gitops-bootstrap
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        with:
+          version: v4.3.1
+      # kind matches the local version; kind-config.yaml pins the node image
+      # by digest, so CI runs the same Kubernetes as `make up`.
+      - uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+        with:
+          version: v0.33.0
+          config: ${{ env.PROJECT }}/kind-config.yaml
+          cluster_name: lab
+          wait: 120s
+      - uses: bats-core/bats-action@3566550e0f594451ac0f58fcbfdeca93aa29a45e # 4.1.0
+        with:
+          bats-version: 1.14.0
+          support-install: false
+          assert-install: false
+          detik-install: false
+          file-install: false
+      - name: make e2e
+        run: make -C "$PROJECT" e2e
+      # Keep the cluster's logs from a failed run, so it can be debugged
+      # without rerunning it.
+      - name: Export kind logs
+        if: failure()
+        run: kind export logs --name lab "$RUNNER_TEMP/kind-logs"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: kind-logs-e2e-01
+          path: ${{ runner.temp }}/kind-logs
+          retention-days: 7

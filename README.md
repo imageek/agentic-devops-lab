@@ -32,7 +32,8 @@ make -C projects/<dir> lint test
 - `.claude/skills/`: reusable agent workflows (`/new-project`, `/ship`)
 - `pre-commit` runs on every commit: shellcheck, YAML syntax, actionlint, gitleaks secret scan
 - GitHub Actions gates every PR: the same pre-commit hooks, then `make lint test` for every project
-  (yamllint, helm lint, ansible-lint, bats and other tests)
+  (yamllint, helm lint, ansible-lint, bats and other tests), and an end-to-end job that installs project
+  01's chart on a throwaway kind cluster and tests the running pods
 
 ## License
 [MIT](LICENSE)
