@@ -29,7 +29,7 @@ endif
 KUBECONFORM := docker run --rm -i ghcr.io/yannh/kubeconform:v0.8.0
 
 # Targets are commands, not files, so always run them.
-.PHONY: lint test smoke up down
+.PHONY: lint test e2e smoke up down
 
 # ---------------------------------------------------------------- setup
 # --force because galaxy otherwise counts a copy bundled with ansible as
@@ -58,6 +58,12 @@ test: $(COLLECTIONS_STAMP)
 	@ansible-playbook -i ansible/inventory.yml ansible/bootstrap.yml --syntax-check
 	@bats tests
 	@for chart in charts/*/; do helm template test "$$chart"; done | $(KUBECONFORM) -strict -summary -ignore-missing-schemas -kubernetes-version $(KUBERNETES_VERSION)
+
+# Installs the hello chart from this tree into kind-lab (release and namespace
+# hello-e2e, beside Argo CD's hello) and tests the running pods. CI runs it on
+# a throwaway kind cluster. Needs a cluster, so it's separate from test.
+e2e:
+	@bats tests/e2e
 
 # Needs a running cluster, so it's separate from test.
 smoke:
